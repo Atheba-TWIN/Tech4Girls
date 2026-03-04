@@ -136,6 +136,7 @@ class _BluetoothScanScreenState extends State<BluetoothScanScreen> {
           onPressed: () async {
             await btProvider.connectToDevice(device.device);
             if (mounted) {
+              // ignore: use_build_context_synchronously
               Navigator.of(context).pop();
             }
           },

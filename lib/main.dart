@@ -1,4 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:tech4girls/screens/auth_wrapper.dart';
+import 'firebase_options.dart';
+import 'package:logging/logging.dart';
 import 'package:provider/provider.dart';
 import 'package:tech4girls/services/notification_service.dart';
 import 'package:tech4girls/services/database_service.dart';
@@ -12,6 +18,19 @@ import 'package:tech4girls/screens/settings_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  if (kIsWeb) {
+    usePathUrlStrategy();
+  }
+
+  // 🔥 Initialize Firebase
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Initialize logging
+  Logger.root.level = Level.ALL;
+  Logger.root.onRecord.listen((rec) {
+    // ignore: avoid_print
+    print('${rec.level.name}: ${rec.time}: ${rec.loggerName}: ${rec.message}');
+  });
 
   // Initialize notification service
   final notificationService = NotificationService();
@@ -21,11 +40,16 @@ void main() async {
   final databaseService = DatabaseService();
   await databaseService.initialize();
 
-  runApp(const MyApp());
+  // Determine whether onboarding was completed
+  bool onboardingDone = databaseService.isOnboardingComplete();
+
+  runApp(MyApp(onboardingDone: onboardingDone));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final bool onboardingDone;
+
+  const MyApp({super.key, required this.onboardingDone});
 
   @override
   Widget build(BuildContext context) {
@@ -41,11 +65,12 @@ class MyApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
           useMaterial3: true,
         ),
-        home: const MainNavigation(),
+        home: const AuthWrapper(),
         routes: {
+          '/home': (context) => const MainNavigation(initialIndex: 0),
+          '/history': (context) => const MainNavigation(initialIndex: 1),
+          '/settings': (context) => const MainNavigation(initialIndex: 2),
           '/scan': (context) => const BluetoothScanScreen(),
-          '/history': (context) => const HistoryScreen(),
-          '/settings': (context) => const SettingsScreen(),
         },
       ),
     );
@@ -53,14 +78,17 @@ class MyApp extends StatelessWidget {
 }
 
 class MainNavigation extends StatefulWidget {
-  const MainNavigation({super.key});
+  final int initialIndex;
+
+  const MainNavigation({super.key, this.initialIndex = 0});
 
   @override
   State<MainNavigation> createState() => _MainNavigationState();
 }
 
 class _MainNavigationState extends State<MainNavigation> {
-  int _selectedIndex = 0;
+  late int _selectedIndex;
+  static bool _providersInitialized = false;
 
   late SensorDataProvider _sensorDataProvider;
   late LocationProvider _locationProvider;
@@ -68,10 +96,12 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   void initState() {
     super.initState();
+    _selectedIndex = widget.initialIndex;
     _initializeProviders();
   }
 
   Future<void> _initializeProviders() async {
+    if (_providersInitialized) return;
     _sensorDataProvider = context.read<SensorDataProvider>();
     _locationProvider = context.read<LocationProvider>();
 
@@ -82,8 +112,10 @@ class _MainNavigationState extends State<MainNavigation> {
     try {
       await _locationProvider.initialize();
     } catch (e) {
-      print('Error initializing location: $e');
+      // use logging instead of print
+      Logger('MainNavigation').shout('Error initializing location: $e');
     }
+    _providersInitialized = true;
   }
 
   final List<Widget> _screens = [
@@ -111,18 +143,16 @@ class _MainNavigationState extends State<MainNavigation> {
         currentIndex: _selectedIndex,
         selectedItemColor: Colors.deepPurple,
         onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
+          if (index == _selectedIndex) return;
+          final route = switch (index) {
+            0 => '/home',
+            1 => '/history',
+            2 => '/settings',
+            _ => '/home',
+          };
+          Navigator.of(context).pushReplacementNamed(route);
         },
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _sensorDataProvider.dispose();
-    _locationProvider.dispose();
-    super.dispose();
   }
 }

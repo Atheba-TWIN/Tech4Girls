@@ -1,5 +1,8 @@
 import 'dart:async';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:logging/logging.dart';
+
+final _log = Logger('BleService');
 
 class BleService {
   static final BleService _instance = BleService._internal();
@@ -40,7 +43,10 @@ class BleService {
       }
 
       // Turn on Bluetooth if needed
-      if (!(await FlutterBluePlus.isOn)) {
+      // `isOn` is deprecated; use adapterState stream instead
+      final adapterOn =
+          await FlutterBluePlus.adapterState.first == BluetoothAdapterState.on;
+      if (!adapterOn) {
         throw Exception('Bluetooth is not turned on');
       }
 
@@ -52,7 +58,7 @@ class BleService {
         _devicesController.add(results);
       });
     } catch (e) {
-      print('Error starting scan: $e');
+      _log.shout('Error starting scan: $e');
       rethrow;
     }
   }
@@ -63,7 +69,7 @@ class BleService {
       await FlutterBluePlus.stopScan();
       await _scanSubscription.cancel();
     } catch (e) {
-      print('Error stopping scan: $e');
+      _log.shout('Error stopping scan: $e');
     }
   }
 
@@ -97,9 +103,9 @@ class BleService {
         }
       }
 
-      print('Connected to ${device.remoteId}');
+      _log.info('Connected to ${device.remoteId}');
     } catch (e) {
-      print('Error connecting to device: $e');
+      _log.shout('Error connecting to device: $e');
       rethrow;
     }
   }
@@ -113,7 +119,7 @@ class BleService {
       }
       await _connectionSubscription.cancel();
     } catch (e) {
-      print('Error disconnecting: $e');
+      _log.shout('Error disconnecting: $e');
     }
   }
 

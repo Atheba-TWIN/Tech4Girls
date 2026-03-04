@@ -10,7 +10,7 @@ class LocationProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
 
-  late StreamSubscription<LocationData> _locationSubscription;
+  StreamSubscription<LocationData>? _locationSubscription;
 
   LocationData? get currentLocation => _currentLocation;
   bool get isLoading => _isLoading;
@@ -68,7 +68,9 @@ class LocationProvider extends ChangeNotifier {
 
   @override
   Future<void> dispose() async {
-    await _locationSubscription.cancel();
+    if (_locationSubscription != null) {
+      await _locationSubscription!.cancel();
+    }
     await _locationService.dispose();
     super.dispose();
   }

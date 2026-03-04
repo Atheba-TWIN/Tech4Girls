@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'package:geolocator/geolocator.dart';
+import 'package:logging/logging.dart';
 import 'package:tech4girls/models/location_data.dart';
+
+final _log = Logger('LocationService');
 
 class LocationService {
   static final LocationService _instance = LocationService._internal();
@@ -20,7 +23,7 @@ class LocationService {
 
   LocationData? get currentLocation => _currentLocation;
 
-  late StreamSubscription<Position> _positionStreamSubscription;
+  StreamSubscription<Position>? _positionStreamSubscription;
 
   /// Initialize location service
   Future<void> initialize() async {
@@ -76,7 +79,7 @@ class LocationService {
 
       return _currentLocation!;
     } catch (e) {
-      print('Error getting current location: $e');
+      _log.shout('Error getting current location: $e');
       rethrow;
     }
   }
@@ -93,7 +96,9 @@ class LocationService {
 
   /// Stop location tracking
   Future<void> stopTracking() async {
-    await _positionStreamSubscription.cancel();
+    if (_positionStreamSubscription != null) {
+      await _positionStreamSubscription!.cancel();
+    }
   }
 
   /// Dispose resources

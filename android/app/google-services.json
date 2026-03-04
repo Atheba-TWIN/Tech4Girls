@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "715002392272",
+    "project_id": "tech4girls-8e9d4",
+    "storage_bucket": "tech4girls-8e9d4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:715002392272:android:b2b7b03bd4888376f178d5",
+        "android_client_info": {
+          "package_name": "com.example.tech4girls"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCXhywRSgXZW1jyg3x0FsPISK8esbCap-o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

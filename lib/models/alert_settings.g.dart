@@ -21,13 +21,17 @@ class AlertSettingsAdapter extends TypeAdapter<AlertSettings> {
       enableTemperatureAlert: fields[1] as bool,
       enableEmergencyAlert: fields[2] as bool,
       enableNotifications: fields[3] as bool,
+      callAmbulanceOnEmergency: fields[4] as bool,
+      emergencyContactIds: (fields[5] as List).cast<String>(),
+      enableMovementAnomaly: fields[6] as bool,
+      movementAnomalyThreshold: fields[7] as double,
     );
   }
 
   @override
   void write(BinaryWriter writer, AlertSettings obj) {
     writer
-      ..writeByte(4)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.temperatureThreshold)
       ..writeByte(1)
@@ -35,7 +39,15 @@ class AlertSettingsAdapter extends TypeAdapter<AlertSettings> {
       ..writeByte(2)
       ..write(obj.enableEmergencyAlert)
       ..writeByte(3)
-      ..write(obj.enableNotifications);
+      ..write(obj.enableNotifications)
+      ..writeByte(4)
+      ..write(obj.callAmbulanceOnEmergency)
+      ..writeByte(5)
+      ..write(obj.emergencyContactIds)
+      ..writeByte(6)
+      ..write(obj.enableMovementAnomaly)
+      ..writeByte(7)
+      ..write(obj.movementAnomalyThreshold);
   }
 
   @override

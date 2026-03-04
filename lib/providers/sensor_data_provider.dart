@@ -5,11 +5,13 @@ import 'package:tech4girls/models/alert_settings.dart';
 import 'package:tech4girls/services/bluetooth_service.dart';
 import 'package:tech4girls/services/notification_service.dart';
 import 'package:tech4girls/services/database_service.dart';
+import 'package:tech4girls/services/emergency_service.dart';
 
 class SensorDataProvider extends ChangeNotifier {
   final BleService _bluetoothService = BleService();
   final NotificationService _notificationService = NotificationService();
   final DatabaseService _databaseService = DatabaseService();
+  final EmergencyService _emergencyService = EmergencyService();
 
   SensorData? _currentData;
   List<SensorData> _sensorHistory = [];
@@ -17,8 +19,8 @@ class SensorDataProvider extends ChangeNotifier {
   bool _isConnected = false;
   String? _connectedDeviceName;
 
-  late StreamSubscription<List<int>> _dataSubscription;
-  late StreamSubscription<dynamic> _connectionSubscription;
+  StreamSubscription<List<int>>? _dataSubscription;
+  StreamSubscription<dynamic>? _connectionSubscription;
 
   SensorData? get currentData => _currentData;
   List<SensorData> get sensorHistory => _sensorHistory;
@@ -52,8 +54,8 @@ class SensorDataProvider extends ChangeNotifier {
       await _databaseService.saveSensorData(_currentData!);
       _sensorHistory.add(_currentData!);
 
-      // Check for alerts
-      _checkAlerts(_currentData!);
+      // Check for alerts and notify contacts
+      await _checkAlerts(_currentData!);
 
       notifyListeners();
     });
@@ -70,18 +72,60 @@ class SensorDataProvider extends ChangeNotifier {
   }
 
   /// Check for temperature and emergency alerts
-  void _checkAlerts(SensorData data) {
+  Future<void> _checkAlerts(SensorData data) async {
     if (!_alertSettings.enableNotifications) return;
+
+    // Check emergency alert first (highest priority)
+    if (_alertSettings.enableEmergencyAlert && data.emergencySignal) {
+      // Show local notification
+      await _notificationService.showEmergencyAlert();
+
+      // Notify emergency contacts
+      if (_alertSettings.emergencyContactIds.isNotEmpty) {
+        await _emergencyService.notifyEmergencyContacts(
+          contactIds: _alertSettings.emergencyContactIds,
+          sensorData: data,
+          messageType: 'emergency',
+        );
+      }
+
+      // Call ambulance if enabled
+      if (_alertSettings.callAmbulanceOnEmergency) {
+        await _emergencyService.callNearestAmbulance(
+          sensorData: data,
+          patientName: 'Patient', // You can get actual name from settings
+        );
+      }
+
+      return; // Emergency takes precedence
+    }
 
     // Check temperature alert
     if (_alertSettings.enableTemperatureAlert &&
         data.temperature >= _alertSettings.temperatureThreshold) {
-      _notificationService.showTemperatureAlert(data.temperature);
+      // Show local notification
+      await _notificationService.showTemperatureAlert(data.temperature);
+
+      // Notify emergency contacts
+      if (_alertSettings.emergencyContactIds.isNotEmpty) {
+        await _emergencyService.notifyEmergencyContacts(
+          contactIds: _alertSettings.emergencyContactIds,
+          sensorData: data,
+          messageType: 'temperature',
+        );
+      }
     }
 
-    // Check emergency alert
-    if (_alertSettings.enableEmergencyAlert && data.emergencySignal) {
-      _notificationService.showEmergencyAlert();
+    // Check movement anomaly
+    if (_alertSettings.enableMovementAnomaly && data.motionDetected) {
+      // Notify emergency contacts about movement
+      if (_alertSettings.emergencyContactIds.isNotEmpty) {
+        await _emergencyService.notifyEmergencyContacts(
+          contactIds: _alertSettings.emergencyContactIds,
+          sensorData: data,
+          messageType: 'movement',
+        );
+      }
     }
   }
 
@@ -89,6 +133,22 @@ class SensorDataProvider extends ChangeNotifier {
   Future<void> updateAlertSettings(AlertSettings settings) async {
     _alertSettings = settings;
     await _databaseService.saveAlertSettings(settings);
+    notifyListeners();
+  }
+
+  /// Inject a manual temperature reading (useful for testing alerts/SMS flow).
+  Future<void> addManualTemperatureReading(double temperature) async {
+    final manualData = SensorData(
+      temperature: temperature,
+      emergencySignal: false,
+      motionDetected: false,
+      timestamp: DateTime.now(),
+    );
+
+    _currentData = manualData;
+    await _databaseService.saveSensorData(manualData);
+    _sensorHistory.add(manualData);
+    await _checkAlerts(manualData);
     notifyListeners();
   }
 
@@ -100,8 +160,8 @@ class SensorDataProvider extends ChangeNotifier {
 
   @override
   Future<void> dispose() async {
-    await _dataSubscription.cancel();
-    await _connectionSubscription.cancel();
+    await _dataSubscription?.cancel();
+    await _connectionSubscription?.cancel();
     super.dispose();
   }
 }
