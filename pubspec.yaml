@@ -41,7 +41,7 @@ dependencies:
   flutter_blue_plus: ^1.31.8
 
   # Local Notifications
-  flutter_local_notifications: ^16.1.0
+  flutter_local_notifications: ^17.2.4
 
   # Geolocator
   geolocator: ^9.0.2

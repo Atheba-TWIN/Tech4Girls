@@ -547,9 +547,9 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Text(
               'Test alerte température',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
             Text(
@@ -577,9 +577,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     final value = double.tryParse(_manualTempController.text);
                     if (value == null) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Température invalide.'),
-                        ),
+                        const SnackBar(content: Text('Température invalide.')),
                       );
                       return;
                     }
@@ -687,7 +685,9 @@ class _HomeScreenState extends State<HomeScreen> {
       builder:
           (context) => AlertDialog(
             title: Text(
-              initial == null ? 'Ajouter un médicament' : 'Modifier le médicament',
+              initial == null
+                  ? 'Ajouter un médicament'
+                  : 'Modifier le médicament',
             ),
             content: SingleChildScrollView(
               child: Column(
@@ -761,11 +761,7 @@ class _MedicationReminder {
     required this.dose,
   });
 
-  Map<String, String> toMap() => {
-    'name': name,
-    'time': time,
-    'dose': dose,
-  };
+  Map<String, String> toMap() => {'name': name, 'time': time, 'dose': dose};
 
   factory _MedicationReminder.fromMap(Map<String, String> map) {
     return _MedicationReminder(
